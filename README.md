@@ -28,8 +28,8 @@ sonyflake = "0.2"
 ```rust
 use sonyflake::Sonyflake;
 
-let sf = Sonyflake::new().unwrap();
-let next_id = sf.next_id().unwrap();
+let sf = Sonyflake::new(1);
+let next_id = sf.next_id();
 println!("{}", next_id);
 ```
 

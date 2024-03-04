@@ -15,8 +15,8 @@
 //! ```
 //! use sonyflake::Sonyflake;
 //!
-//! let mut sf = Sonyflake::new().unwrap();
-//! let next_id = sf.next_id().unwrap();
+//! let mut sf = Sonyflake::new(1);
+//! let next_id = sf.next_id();
 //! println!("{}", next_id);
 //! ```
 //!
@@ -27,13 +27,13 @@
 //! use sonyflake::Sonyflake;
 //! use std::thread;
 //!
-//! let sf = Sonyflake::new().unwrap();
+//! let sf = Sonyflake::new(1);
 //!
 //! let mut children = Vec::new();
 //! for _ in 0..10 {
 //!     let mut thread_sf = sf.clone();
 //!     children.push(thread::spawn(move || {
-//!         println!("{}", thread_sf.next_id().unwrap());
+//!         println!("{}", thread_sf.next_id());
 //!     }));
 //! }
 //!
@@ -50,12 +50,8 @@
 #[doc = include_str!("../README.md")]
 pub struct ReadmeDoctests;
 
-mod builder;
-mod error;
 mod sonyflake;
 #[cfg(test)]
 mod tests;
 
 pub use crate::sonyflake::*;
-pub use builder::*;
-pub use error::*;

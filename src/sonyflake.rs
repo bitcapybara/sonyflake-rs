@@ -1,11 +1,6 @@
 use chrono::prelude::*;
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration,
-};
-
-use crate::{builder::Builder, error::*};
+use parking_lot::Mutex;
+use std::{sync::Arc, thread, time::Duration};
 
 /// bit length of time
 pub(crate) const BIT_LEN_TIME: u64 = 39;
@@ -36,25 +31,21 @@ impl Sonyflake {
     /// For custom configuration see [`builder`].
     ///
     /// [`builder`]: struct.Sonyflake.html#method.builder
-    pub fn new() -> Result<Self, Error> {
-        Builder::new().finalize()
-    }
-
-    /// Create a new [`Builder`] to construct a Sonyflake.
-    ///
-    /// [`Builder`]: struct.Builder.html
-    pub fn builder<'a>() -> Builder<'a> {
-        Builder::new()
-    }
-
-    pub(crate) fn new_inner(shared: Arc<SharedSonyflake>) -> Self {
-        Self(shared)
+    pub fn new(machine_id: u16, start_time: DateTime<Utc>) -> Self {
+        Self(Arc::new(SharedSonyflake {
+            start_time: to_sonyflake_time(start_time),
+            machine_id,
+            internals: Mutex::new(Internals {
+                elapsed_time: 0,
+                sequence: 1 << (BIT_LEN_SEQUENCE - 1),
+            }),
+        }))
     }
 
     /// Generate the next unique id.
     /// After the Sonyflake time overflows, next_id returns an error.
-    pub fn next_id(&self) -> Result<u64, Error> {
-        let mut internals = self.0.internals.lock().map_err(|_| Error::MutexPoisoned)?;
+    pub fn next_id(&self) -> u64 {
+        let mut internals = self.0.internals.lock();
 
         let current = current_elapsed_time(self.0.start_time);
         if internals.elapsed_time < current {
@@ -71,14 +62,12 @@ impl Sonyflake {
         }
 
         if internals.elapsed_time >= 1 << BIT_LEN_TIME {
-            return Err(Error::OverTimeLimit);
+            panic!("Sonyflake time overflow");
         }
 
-        Ok(
-            (internals.elapsed_time as u64) << (BIT_LEN_SEQUENCE + BIT_LEN_MACHINE_ID)
-                | (internals.sequence as u64) << BIT_LEN_MACHINE_ID
-                | (self.0.machine_id as u64),
-        )
+        (internals.elapsed_time as u64) << (BIT_LEN_SEQUENCE + BIT_LEN_MACHINE_ID)
+            | (internals.sequence as u64) << BIT_LEN_MACHINE_ID
+            | (self.0.machine_id as u64)
     }
 }
 
@@ -89,10 +78,10 @@ impl Clone for Sonyflake {
     }
 }
 
-const SONYFLAKE_TIME_UNIT: i64 = 10_000_000; // nanoseconds, i.e. 10msec
+const SONYFLAKE_TIME_UNIT: i64 = 10_000; // microseconds, i.e. 10ms
 
 pub(crate) fn to_sonyflake_time(time: DateTime<Utc>) -> i64 {
-    time.timestamp_nanos() / SONYFLAKE_TIME_UNIT
+    time.timestamp_micros() / SONYFLAKE_TIME_UNIT
 }
 
 fn current_elapsed_time(start_time: i64) -> i64 {
@@ -101,7 +90,7 @@ fn current_elapsed_time(start_time: i64) -> i64 {
 
 fn sleep_time(overtime: i64) -> Duration {
     Duration::from_millis(overtime as u64 * 10)
-        - Duration::from_nanos((Utc::now().timestamp_nanos() % SONYFLAKE_TIME_UNIT) as u64)
+        - Duration::from_micros((Utc::now().timestamp_micros() % SONYFLAKE_TIME_UNIT) as u64)
 }
 
 pub struct DecomposedSonyflake {

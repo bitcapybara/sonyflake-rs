@@ -1,10 +1,10 @@
 [package]
 name = "sonyflake"
 version = "0.2.0"
-authors = ["Arne Bahlo <hallo@arne.me>"]
+authors = ["bitcapybara yuxing.bitcapybara@gmail.com"]
 license = "MIT OR Apache-2.0"
 description = "A distributed unique ID generator inspired by Twitter's Snowflake"
-repository = "https://github.com/bahlo/sonyflake-rs"
+repository = "https://github.com/bitcapybara/sonyflake-rs"
 readme = "README.md"
 keywords = ["sonyflake", "snowflake", "random", "id", "generator"]
 edition = "2021"
